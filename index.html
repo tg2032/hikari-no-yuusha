@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#000000">
+<title>ひかりのゆうしゃ - ドラクエ風RPG</title>
+<style>
+html,body{margin:0;padding:0;background:#000;color:#fff;font-family:"Hiragino Kaku Gothic ProN","Yu Gothic",Hiragino Sans,sans-serif;touch-action:manipulation;overscroll-behavior:none;-webkit-user-select:none;user-select:none}
+h1,p{margin:0;padding:0}
+#wrap{max-width:640px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;background:#000}
+#title-bar{display:flex;justify-content:space-between;align-items:center;padding:8px 10px}
+#title-bar .logo{font-size:17px;font-weight:bold;color:#ffd700;text-shadow:2px 2px 0 #800;letter-spacing:2px}
+#title-bar .tools{display:flex;gap:6px}
+#title-bar .tools button{background:#111;color:#fff;border:2px solid #fff;border-radius:8px;font-size:15px;padding:4px 10px;cursor:pointer}
+#title-bar .tools button:active{background:#ffd700;color:#000}
+#screen-wrap{position:relative;width:calc(100% - 12px);margin:0 6px;aspect-ratio:4/3;background:#000;border:4px solid #fff;border-radius:10px;overflow:hidden;touch-action:none}
+canvas#game{width:100%;height:100%;display:block;image-rendering:pixelated;background:#000}
+#overlay{position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(20,20,80,.96),rgba(0,0,10,.97));display:flex;flex-direction:column;justify-content:center;align-items:center;z-index:10;text-align:center;padding:20px}
+#overlay h1{color:#ffd700;font-size:30px;margin-bottom:4px;text-shadow:2px 2px 0 #800,0 0 18px #ff0;letter-spacing:3px;animation:glow 1.6s infinite alternate}
+@keyframes glow{from{text-shadow:2px 2px 0 #800}to{text-shadow:2px 2px 0 #800,0 0 22px #ffd700}}
+#overlay .sub{color:#9df;font-size:13px;margin-bottom:10px;letter-spacing:4px}
+#overlay p{font-size:14px;margin-bottom:14px;line-height:1.9}
+#overlay button{margin:5px;padding:12px 30px;font-size:17px;font-weight:bold;border:3px solid #fff;border-radius:10px;background:#111;color:#fff;cursor:pointer;min-width:240px}
+#overlay button:active{background:#ffd700;color:#000}
+#overlay .note{font-size:11px;color:#888;margin-top:8px}
+#msgbox{border:3px solid #fff;border-radius:10px;background:#0a0a18;margin:6px;padding:10px 12px;min-height:92px;font-size:16px;line-height:1.65;white-space:pre-wrap;cursor:pointer}
+#cmdbox{display:none;gap:8px;flex-wrap:wrap;margin:0 6px 6px}
+#cmdbox.show{display:flex}
+button.cmd{flex:1 1 40%;min-height:50px;font-size:16px;font-weight:bold;background:#101028;color:#fff;border:3px solid #fff;border-radius:10px;cursor:pointer;padding:6px}
+button.cmd:active{background:#ffd700;color:#000}
+#statusbar{display:flex;gap:6px;margin:0 6px 6px;font-size:12px}
+.stat{flex:1;background:#0a0a18;border:2px solid #fff;border-radius:8px;padding:4px 6px;text-align:center}
+.stat b{color:#ffd700}
+.bar{height:5px;background:#333;border-radius:3px;margin-top:3px;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:3px}
+#hpbar i{background:#3f6}
+#mpbar i{background:#4af}
+#controls{display:flex;justify-content:space-between;align-items:center;padding:6px 12px 14px;gap:10px}
+#dpad{display:grid;grid-template-columns:60px 60px 60px;grid-template-rows:60px 60px 60px;gap:2px;touch-action:none}
+#dpad button{background:#1a1a2a;color:#fff;border:2px solid #fff;border-radius:12px;font-size:24px;touch-action:none;cursor:pointer}
+#dpad button:active{background:#ffd700;color:#000}
+#dpad .lbl{text-align:center;font-size:11px;color:#888;align-self:center}
+#ab-btns{display:flex;gap:12px;touch-action:none}
+#ab-btns button{width:76px;height:76px;border-radius:50%;font-size:19px;font-weight:bold;border:3px solid #fff;background:#b02020;color:#fff;cursor:pointer;touch-action:none}
+#ab-btns button#b-btn{background:#2055aa}
+#ab-btns button:active{filter:brightness(1.6)}
+#ab-btns button span{font-size:10px;font-weight:normal}
+.hint{font-size:11px;color:#888;text-align:center;padding:0 10px 12px;line-height:1.7}
+.hidden{display:none!important}
+#help{position:absolute;inset:0;background:rgba(0,0,20,.97);z-index:20;padding:22px;font-size:14px;line-height:2;overflow:auto}
+#help h2{font-size:18px;color:#ffd700;margin:0 0 8px}
+#help button{margin-top:12px;padding:10px 26px;font-size:16px;font-weight:bold;background:#111;color:#fff;border:3px solid #fff;border-radius:10px}
+#mini{position:absolute;top:6px;right:6px;z-index:5;border:2px solid #fff;border-radius:6px;background:#000;image-rendering:pixelated}
+#overlay .deco{font-size:30px;margin-bottom:8px;letter-spacing:6px}
+#overlay .deco span{display:inline-block;animation:bob2 1s infinite alternate}
+#overlay .deco span:nth-child(2n){animation-delay:.15s}
+#overlay .deco span:nth-child(3n){animation-delay:.3s}
+@keyframes bob2{from{transform:translateY(0)}to{transform:translateY(-10px)}}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="title-bar">
+    <div class="logo">★ ひかりのゆうしゃ ★</div>
+    <div class="tools">
+      <button id="btn-map" title="ちず表示 (M)">🗺</button>
+      <button id="btn-bgm" title="BGM on/off">🎵ON</button>
+      <button id="btn-help" title="あそびかた">？</button>
+    </div>
+  </div>
+  <div id="screen-wrap">
+    <canvas id="game" width="480" height="360"></canvas>
+    <canvas id="mini" width="120" height="112" class="hidden"></canvas>
+    <div id="overlay">
+      <div class="sub">— DORAKUE-FU RPG —</div>
+      <div class="deco"><span>🟢</span><span>👺</span><span>🦇</span><span>🐉</span><span>👹</span></div>
+      <h1>ひかりのゆうしゃ</h1>
+      <p>さらわれた ひめを たすけ<br>魔王バーンを たおせ！<br>まち → そうび → 北東の魔王城</p>
+      <button id="btn-new">▶ はじめから</button>
+      <button id="btn-load">▶ つづきから</button>
+      <div class="note">※効果音・BGMあり / 教会・宿で自動セーブ</div>
+    </div>
+    <div id="help" class="hidden">
+      <h2>あそびかた</h2>
+      ・十字キーで移動、Aで はなす・すすむ<br>
+      ・人や施設に 向かって Aをおす<br>
+      ・Bで ステータス・どうぐ・じゅもん使用<br>
+      ・🗺ボタン(Mキー)で ちず表示<br>
+      ・📋さくせんで 自動戦闘(がんがん/いのち大事に)<br>
+      ・📖図鑑は Bメニューから確認できる<br>
+      ・🌸花畑(フィールド)は 1回だけ回復できる<br>
+      ・ひめの前には 番竜が…心してかかれ<br>
+      ・クリア後は つよくてニューゲーム可<br>
+      ・ダンジョンでは リレミト(Lv5)で脱出可<br>
+      ・つぎの目的は Bボタンで確認できる<br>
+      ・草むら・ダンジョンで モンスター出現<br>
+      ・レベルを上げ、武器・防具を買い、北東の魔王城へ<br>
+      ・教会で セーブ。宿屋(15G)で 全回復<br>
+      ・ひめは 魔王城の最奥にいる。話すと決戦！<br>
+      <button id="btn-help-close">とじる</button>
+    </div>
+  </div>
+  <div id="msgbox">ゆうしゃ が あらわれた！</div>
+  <div id="cmdbox"></div>
+  <div id="statusbar">
+    <div class="stat">Lv <b id="st-lv">1</b><br><span id="st-exp" style="color:#9df">つぎ40</span></div>
+    <div class="stat">HP <b id="st-hp">-</b><div class="bar" id="hpbar"><i style="width:100%"></i></div></div>
+    <div class="stat">MP <b id="st-mp">-</b><div class="bar" id="mpbar"><i style="width:100%"></i></div></div>
+    <div class="stat">G <b id="st-g">0</b><br><span id="st-item" style="color:#fa8">💊0 🧪0</span></div>
+  </div>
+  <div id="controls">
+    <div id="dpad">
+      <span></span><button data-dir="up">▲</button><span></span>
+      <button data-dir="left">◀</button><button data-dir="down">▼</button><button data-dir="right">▶</button>
+      <span></span><span class="lbl">いどう</span><span></span>
+    </div>
+    <div id="ab-btns">
+      <button id="b-btn">B<br><span>ステータス</span></button>
+      <button id="a-btn">A<br><span>はなす・すすむ</span></button>
+    </div>
+  </div>
+  <div class="hint">PC: 矢印/WASD・Z/Enter=A・X/Esc=B ｜ 会話は相手に 向かってA ｜ 文しょうタップで早送り</div>
+</div>
+<script>
+"use strict";
+/* ================= 音 ================= */
+let AC=null,bgmMode=null,bgmTimer=null,bgmStep=0,bgmNext=0,bgmOn=true;
+try{bgmOn=localStorage.getItem("dq_bgm")!=="off";}catch(e){}
+function ac(){try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();if(AC.state==="suspended")AC.resume();return AC;}catch(e){return null;}}
+function toneAt(f,when,dur,type,vol){
+  const c=ac();if(!c)return;
+  const o=c.createOscillator(),g=c.createGain();
+  o.connect(g);g.connect(c.destination);
+  o.type=type||"square";o.frequency.setValueAtTime(f,when);
+  g.gain.setValueAtTime(vol||.06,when);g.gain.exponentialRampToValueAtTime(.001,when+dur);
+  o.start(when);o.stop(when+dur+.02);
+}
+function tone(f,t0,dur,type,vol){toneAt(f,t0,dur,type,vol);}
+function se(type){
+  const c=ac();if(!c)return;const t=c.currentTime;
+  const N={move:()=>tone(440,t,.05,"square",.025),talk:()=>tone(520,t,.07,"square",.05),
+    hit:()=>{tone(160,t,.12,"sawtooth",.1);tone(90,t,.15,"square",.08);},
+    slash:()=>{tone(900,t,.06,"sawtooth",.07);tone(1400,t+.05,.08,"sawtooth",.06);},
+    fire:()=>{tone(300,t,.2,"sawtooth",.09);tone(150,t+.05,.25,"sawtooth",.09);},
+    heal:()=>{tone(523,t,.12,"sine",.09);tone(659,t+.1,.12,"sine",.09);tone(784,t+.2,.2,"sine",.09);},
+    gold:()=>{tone(1200,t,.08,"square",.06);tone(1600,t+.08,.12,"square",.06);},
+    chest:()=>{tone(392,t,.12,"square",.07);tone(523,t+.12,.12,"square",.07);tone(659,t+.24,.2,"square",.07);},
+    win:()=>{[523,659,784,1047].forEach((f,i)=>tone(f,t+i*.12,.15,"square",.07));},
+    lvl:()=>{[523,659,784,1047,1319].forEach((f,i)=>tone(f,t+i*.1,.18,"square",.08));},
+    lose:()=>{[400,350,300,200].forEach((f,i)=>tone(f,t+i*.2,.25,"sawtooth",.09));},
+    run:()=>{tone(600,t,.1,"square",.06);tone(900,t+.08,.12,"square",.06);},
+    curse:()=>{tone(110,t,.5,"sawtooth",.1);tone(92,t+.1,.5,"sawtooth",.1);}
+  };
+  (N[type]||N.talk)();
+}
+// BGM: 簡易ステップシーケンサ (midi, 0=休符)
+const SONGS={
+  field:{ms:210,seq:[72,76,79,76,81,79,76,74,72,76,79,76,81,84,81,79],bass:[48,55,53,55]},
+  town:{ms:300,seq:[48,55,60,55,53,57,60,57,55,60,64,60,57,55,53,0],bass:[48,55,53,57]},
+  dungeon:{ms:260,seq:[45,0,45,48,0,47,45,0,43,0,43,47,0,46,0,0],bass:[45,45,43,43]},
+  battle:{ms:140,seq:[45,45,48,45,43,43,47,46,45,45,48,52,50,48,47,46],bass:[45,43,45,47]},
+  boss:{ms:130,seq:[44,44,47,46,44,44,50,49,44,44,47,52,50,49,47,46],bass:[44,43,44,50]}
+};
+const mf=m=>440*Math.pow(2,(m-69)/12);
+function playBgm(mode){
+  if(mode===bgmMode)return;stopBgm();
+  if(!mode||!bgmOn)return;
+  const s=SONGS[mode];if(!s)return;
+  bgmMode=mode;bgmStep=0;
+  const c=ac();bgmNext=(c?c.currentTime:0)+0.08;
+  bgmTimer=setInterval(()=>{
+    if(!bgmOn||bgmMode!==mode)return;
+    const c2=ac();if(!c2)return;
+    if(bgmNext<c2.currentTime-0.25)bgmNext=c2.currentTime+0.05; // 長時間停止後のバースト防止
+    const stepDur=s.ms/1000;
+    while(bgmNext<c2.currentTime+0.35){
+      const n=s.seq[bgmStep%s.seq.length],bn=s.bass[bgmStep%s.bass.length];
+      if(n)toneAt(mf(n),bgmNext,.16,"square",.035);
+      if(bn)toneAt(mf(bn-12),bgmNext,.22,"triangle",.05);
+      bgmNext+=stepDur;bgmStep++;
+    }
+  },100);
+}
+function stopBgm(){if(bgmTimer)clearInterval(bgmTimer);bgmTimer=null;bgmMode=null;}
+function refreshBgmBtn(){document.getElementById("btn-bgm").textContent=bgmOn?"🎵ON":"🎵OFF";}
+
+/* ================= データ ================= */
+const T=24;
+const cv=document.getElementById("game"),ctx=cv.getContext("2d");
+ctx.imageSmoothingEnabled=false;
+const msgbox=document.getElementById("msgbox"),cmdbox=document.getElementById("cmdbox"),overlay=document.getElementById("overlay");
+const FIELD=[
+"111111111111111111111111111111",
+"100000000000222220000000000011",
+"100000000002222222000000080011",
+"100008000022222220000330000011",
+"100000000002222000003333000011",
+"103300000000220000033333330011",
+"133330111100000000033333330011",
+"133330111100008000033303330011",
+"133300000100000000000000000011",
+"133000000100000111100000000011",
+"100000000100000111100008000011",
+"100080000000000000000000000011",
+"100000000000999000000222000011",
+"100000111100999000002222220011",
+"100000111100000000022222220011",
+"100000000000080000002222000011",
+"100330000070000000000000000011",
+"100333300111100000000080000011",
+"100333300111100033000000000011",
+"100033000000000033300008000011",
+"100000000008000033300000000011",
+"100000000000000000000000550011",
+"100008000000111100000005550011",
+"100000000000111100000055550011",
+"100000000000000000000055550011",
+"100000000000000000000005550011",
+"100000008000000700000000000011",
+"100000000000000000000000000011",
+"111111111111111111111111111111"];
+const TOWN=[
+"44444444444444444444",
+"43333333333333333344",
+"43383833333338333344",
+"43333333399333333344",
+"43333333399334433344",
+"43338333333334433344",
+"43333339999333333344",
+"43333339999383833344",
+"43333333333333333344",
+"43338333399333383344",
+"43333333399333333344",
+"43333333333333833344",
+"43333383833333333344",
+"46663333333333333344",
+"44444444444444444444"];
+const DUNGEON=[
+"5555555555555555555555555",
+"5000000000500000000000055",
+"5070800000507070008000055",
+"5000000000500000000000055",
+"5550555555550555555055555",
+"5000500000000500005000055",
+"5000507070000507075000055",
+"5000500000000500005000055",
+"5000555555055550505000055",
+"5000000005050000505000055",
+"5707080005050700505000055",
+"5000000005050000505000055",
+"5555555055055550505000055",
+"5000005055000000505000055",
+"5007075055555705055000055",
+"5000005000000505050000055",
+"5055505007070505555505055",
+"5050005000000500000005055",
+"5050705555505555705055055",
+"5000000000500000005000055",
+"5555555500505555505000055",
+"5000000000505000005000055",
+"5007070800505007075000055",
+"5000000000005000000000655",
+"5555555555555555555555555"];
+const MAPS={field:FIELD,town:TOWN,dungeon:DUNGEON};
+const WEAPONS=[{n:"ひのきのぼう",atk:2,price:0},{n:"どうのつるぎ",atk:5,price:60},{n:"はがねのつるぎ",atk:10,price:200},{n:"ほのおのつるぎ",atk:16,price:480},{n:"ゆうしゃのつるぎ",atk:24,price:1200}];
+const ARMORS=[{n:"ぬののふく",def:1,price:0},{n:"かわのよろい",def:4,price:80},{n:"くさりかたびら",def:8,price:240},{n:"はがねのよろい",def:13,price:520},{n:"ひかりのよろい",def:20,price:1300}];
+const ENEMIES=[
+ {n:"スライム",e:"🟢",hp:12,atk:6,def:0,exp:8,gold:7},
+ {n:"おおこうもり",e:"🦇",hp:20,atk:9,def:1,exp:15,gold:14},
+ {n:"ゴブリン",e:"👺",hp:30,atk:13,def:3,exp:26,gold:28},
+ {n:"おばけきのこ",e:"🍄",hp:26,atk:11,def:2,exp:22,gold:20},
+ {n:"キメラ",e:"🦅",hp:42,atk:16,def:5,exp:44,gold:48},
+ {n:"おおきづち",e:"🪨",hp:58,atk:19,def:7,exp:68,gold:75},
+ {n:"しりょう",e:"👻",hp:68,atk:22,def:8,exp:98,gold:105},
+ {n:"ダークナイト",e:"💀",hp:85,atk:24,def:10,exp:120,gold:140},
+ {n:"ゴーレム",e:"🗿",hp:115,atk:27,def:14,exp:180,gold:210},
+ {n:"ドラゴン",e:"🐉",hp:145,atk:30,def:12,exp:300,gold:380},
+ {n:"魔王バーン",e:"👹",hp:220,atk:33,def:12,exp:900,gold:1500,boss:true}];
+const CHEST_FIXED={
+  "field:10,16":{t:"gold",v:100},"field:15,26":{t:"herb",v:2},
+  "dungeon:17,22":{t:"gold",v:50},"dungeon:15,22":{t:"herb",v:2},
+  "dungeon:16,18":{t:"gold",v:120},"dungeon:13,14":{t:"mwater",v:2},
+  "dungeon:11,16":{t:"gold",v:200},"dungeon:9,16":{t:"weap",v:1},
+  "dungeon:13,10":{t:"gold",v:250},"dungeon:15,6":{t:"armor",v:1},
+  "dungeon:5,22":{t:"gold",v:300},"dungeon:17,6":{t:"mwater",v:2},
+  "dungeon:3,22":{t:"gold",v:350},"dungeon:14,2":{t:"weap",v:2},
+  "dungeon:8,6":{t:"gold",v:400},"dungeon:4,18":{t:"armor",v:2},
+  "dungeon:3,10":{t:"gold",v:500},"dungeon:12,2":{t:"mwater",v:3},
+  "dungeon:6,6":{t:"weap",v:3},"dungeon:1,10":{t:"armor",v:3},
+  "dungeon:5,14":{t:"gold",v:600},"dungeon:3,14":{t:"weap",v:4},
+  "dungeon:2,2":{t:"armor",v:4}
+};
+const SPELLS=[{id:"hoimi",n:"ホイミ",mp:3,minLv:2,d:"HPを25+Lv×2回復"},{id:"mera",n:"メラ",mp:4,minLv:3,d:"12+Lv×3ダメージ"},{id:"ril",n:"リレミト",mp:6,minLv:5,d:"ダンジョンから脱出(場外用)"},{id:"gira",n:"ギラ",mp:8,minLv:6,d:"20+Lv×4ダメージ"},{id:"behoimi",n:"ベホイミ",mp:8,minLv:8,d:"HPを70回復"}];
+function nextGoal(){
+  if(!S.metKing)return "つぎの目的: まち(北西)で 王様に会う";
+  if(S.lv<5)return "つぎの目的: レベル5をめざす(スライム・ゴブリン狩り)";
+  if(S.wi<2||S.ai<2)return "つぎの目的: はがね装備を買う(ぶきや)";
+  if(S.lv<10)return "つぎの目的: レベル10をめざす(北・東エリア)";
+  return "つぎの目的: 北東の魔王城で ひめを救え！";
+}
+
+/* ================= 状態 ================= */
+let S=null,B=null,npcs=[];
+let safeSteps=0;
+function newGame(){
+  S={map:"field",x:7,y:5,rx:7,ry:5,dir:"down",lv:1,hp:24,maxhp:24,mp:7,maxmp:7,
+    atk:3,def:2,exp:0,gold:40,wi:0,ai:0,herb:2,mwater:1,metKing:false,kills:0,
+    tactic:null,dex:{},
+    flag:{chest:{}},steps:0,mode:"walk",t0:Date.now(),ptime:0,bossTurn:0};
+}
+function save(){try{S.ptime=(S.ptime||0)+Math.max(0,Date.now()-S.t0);S.t0=Date.now();localStorage.setItem("dq_save2",JSON.stringify(S));}catch(e){}}
+function load(){try{const s=localStorage.getItem("dq_save2");if(!s)return false;const o=JSON.parse(s);if(!o||!o.lv)return false;S=o;S.rx=S.x;S.ry=S.y;S.t0=Date.now();if(S.ptime==null)S.ptime=0;if(S.kills==null)S.kills=0;if(S.mwater==null)S.mwater=0;if(!S.dex)S.dex={};if(!S.flag)S.flag={chest:{}};if(S.mode!=="walk")S.mode="walk";return true;}catch(e){return false;}}
+const playMs=()=>(S.ptime||0)+Math.max(0,Date.now()-S.t0);
+const expNeed=()=>S.lv*S.lv*10+30;
+const atkV=()=>S.atk+WEAPONS[S.wi].atk;
+const defV=()=>S.def+ARMORS[S.ai].def;
+const knownSpells=()=>SPELLS.filter(s=>S.lv>=s.minLv);
+
+/* ================= メッセージ(タイプライター) ================= */
+let typeInt=null,typing=false,fullText="",shown=0,sayCb=null;
+function renderMsg(done){msgbox.textContent=fullText.slice(0,shown)+(done?"\n▼":"");}
+function say(text,cb){
+  fullText=text;shown=0;sayCb=cb||null;typing=true;hideCmd();
+  clearInterval(typeInt);
+  typeInt=setInterval(()=>{
+    shown+=2;
+    if(shown>=fullText.length){
+      shown=fullText.length;typing=false;clearInterval(typeInt);
+      renderMsg(true);
+      // さくせん中は自動で進行
+      if(S&&S.tactic&&S.mode==="battle"&&sayCb){
+        const cb=sayCb;
+        setTimeout(()=>{if(sayCb===cb&&S&&S.tactic&&S.mode==="battle"){sayCb=null;cb();}},950);
+      }
+      return;
+    }
+    renderMsg(false);
+  },18);
+  renderMsg(false);
+}
+function advance(){
+  ac();
+  if(typing){shown=fullText.length;typing=false;clearInterval(typeInt);renderMsg(true);se("talk");return;}
+  if(sayCb){const f=sayCb;sayCb=null;se("talk");f();}
+}
+function showCmd(list){
+  sayCb=null;cmdbox.innerHTML="";cmdbox.classList.add("show");
+  list.forEach(c=>{
+    const b=document.createElement("button");b.className="cmd";b.textContent=c.label;
+    b.onclick=ev=>{ev.stopPropagation();ac();se("talk");hideCmd();c.fn();};
+    cmdbox.appendChild(b);
+  });
+}
+function hideCmd(){cmdbox.classList.remove("show");cmdbox.innerHTML="";}
+function updateStatus(){
+  if(!S)return;
+  document.getElementById("st-lv").textContent=S.lv;
+  document.getElementById("st-exp").textContent="つぎ"+(expNeed()-S.exp);
+  document.getElementById("st-hp").textContent=S.hp+"/"+S.maxhp;
+  document.getElementById("st-mp").textContent=S.mp+"/"+S.maxmp;
+  document.getElementById("st-g").textContent=S.gold;
+  document.getElementById("st-item").textContent="💊"+S.herb+" 🧪"+S.mwater;
+  document.querySelector("#hpbar i").style.width=Math.max(0,S.hp/S.maxhp*100)+"%";
+  document.querySelector("#mpbar i").style.width=Math.max(0,S.mp/S.maxmp*100)+"%";
+}
+
+/* ================= NPC ================= */
+const NPC_EMOJI={shop:"🧙",inn:"🧑‍🦰",church:"⛪",king:"🤴",girl:"👸",gate:"💂",sage:"🧓",sign:"🪧"};
+function setupNPCs(){
+  if(S.map==="town")npcs=[
+    {x:9,y:9,t:"king"},{x:5,y:4,t:"shop"},{x:14,y:7,t:"inn"},
+    {x:13,y:4,t:"church"},{x:7,y:12,t:"girl"},{x:3,y:10,t:"sage"}];
+  else if(S.map==="field")npcs=[
+    {x:19,y:20,t:"gate"},
+    {x:10,y:13,t:"sign",msg:"🪧「↑ 北の湖をこえると 魔王城が近い。まわりこんで 北東へ すすめ」"},
+    {x:6,y:16,t:"sign",msg:"🪧「← 西に まち / 北東に 魔王城。夜道(ダンジョン)は きけん！」"}];
+  else if(S.map==="dungeon")npcs=[
+    {x:17,y:13,t:"girl",boss:true},
+    {x:18,y:15,t:"sign",msg:"🪧「ひめは 北の行き止まりに とらわれている。番竜と 魔王が まちかまえるぞ」"}];
+  else npcs=[];
+}
+function npcText(n){
+  if(n.msg)return n.msg;
+  switch(n.t){
+    case "king":
+      if(!S.metKing)return "🤴「おお ゆうしゃよ！よくぞ もどった。魔王バーンは 北東の城に おる。わしからの はなむけに やくそうを さずけよう。レベルを上げ、はがね装備で 挑むのじゃ！」";
+      return "🤴「魔王城は フィールド北東じゃ。ひめの前には 番竜ドラゴンが ひかえているぞ。ダンジョンの たからばこには 伝説の装備が ねむる。教会で こまめに きろくするのじゃぞ」";
+    case "shop":return "🧙「ぶきやへ ようこそ！」";
+    case "inn":return "🧑‍🦰「やどやへ ようこそ！一泊15Gです」";
+    case "church":return "⛪「きょうかいです。おいのり(セーブ)しましょう」";
+    case "girl":return S.map==="dungeon"?"👸「きてくれたのね…！でも 魔王の気配が ちかづいてくる…！」":"👧「ひめさまは 魔王城の おくに とらわれています…たすけてあげて！」";
+    case "gate":return "💂「この先が 魔王城だ。レベル10・はがね装備なしでは もどるがよい。ダンジョン内は 強敵ぞろい。やくそうと まほうすいを 忘れるな」";
+    case "sage":return "🧓「じゅもんは レベルで おぼえる。ホイミ(2)・メラ(3)・リレミト(5)・ギラ(6)・ベホイミ(8)じゃ。リレミトは ダンジョン脱出に べんりじゃぞ」";
+  }
+  return "……";
+}
+
+/* ================= マップ移動 ================= */
+function tileAt(map,x,y){const m=MAPS[map];if(y<0||y>=m.length||x<0||x>=m[0].length)return "4";return m[y][x];}
+function isWalk(ch,map){const w=map==="dungeon"?"036798":"0356978";return w.indexOf(ch)>=0;}
+function moving(){return Math.abs(S.x-S.rx)>0.03||Math.abs(S.y-S.ry)>0.03;}
+function tryMove(dir){
+  if(!S||S.mode!=="walk"||moving())return;
+  S.dir=dir;
+  const dx={left:-1,right:1,up:0,down:0}[dir],dy={up:-1,down:1,left:0,right:0}[dir];
+  const nx=S.x+dx,ny=S.y+dy,m=MAPS[S.map];
+  if(ny<0||ny>=m.length||nx<0||nx>=m[0].length)return;
+  if(npcs.some(n=>n.x===nx&&n.y===ny))return;
+  const ch=m[ny][nx];
+  if(!isWalk(ch,S.map)){say("そこは いけない！");return;}
+  se("move");S.x=nx;S.y=ny;S.steps++;if(safeSteps>0)safeSteps--;
+  sayCb=null;hideCmd(); // 古い会話の続きを破棄
+  // 遷移判定
+  if(S.map==="field"&&nx>=1&&nx<=5&&ny>=5&&ny<=9){
+    S.map="town";S.x=2;S.y=12;S.rx=2;S.ry=12;setupNPCs();se("talk");playBgm("town");
+    say("まちに ついた！\n王様(🤴)に 会おう。ぶきや・やどや・教会あり。");updateStatus();return;
+  }
+  if(S.map==="field"&&nx>=20&&nx<=25&&ny>=20&&ny<=26){
+    S.map="dungeon";S.x=21;S.y=23;S.rx=21;S.ry=23;setupNPCs();se("curse");playBgm("dungeon");
+    say("魔王城に しんにゅう した！\nひめ(👸)を さがせ！階段(金色)で 脱出できる。");updateStatus();return;
+  }
+  if(ch==="6"){
+    if(S.map==="town"){S.map="field";S.x=2;S.y=4;S.rx=2;S.ry=4;setupNPCs();playBgm("field");say("フィールドに でた！");}
+    else if(S.map==="dungeon"){S.map="field";S.x=22;S.y=19;S.rx=22;S.ry=19;setupNPCs();playBgm("field");say("魔王城から 脱出した！\nじゅんびを ととのえて 再挑戦しよう。");}
+    updateStatus();return;
+  }
+  const key=S.map+":"+nx+","+ny;
+  if(ch==="7"&&!S.flag.chest[key]){openChest(key);return;}
+  // せいなるいずみ(フィールドの花畑): 各1回HP15回復
+  if(S.map==="field"&&ch==="8"){
+    const ik="izumi:"+nx+","+ny;
+    if(!S.flag.chest[ik]&&S.hp<S.maxhp){
+      S.flag.chest[ik]=true;S.hp=Math.min(S.maxhp,S.hp+15);se("heal");save();updateStatus();
+      say("🌸せいなるいずみ！ HPが 15かいふくした！",null);return;
+    }
+  }
+  if(S.map!=="town"&&(ch==="0"||ch==="9")&&safeSteps<=0){
+    const rate=S.map==="dungeon"?0.13:0.08;
+    if(Math.random()<rate){startBattle({terrain:ch});return;}
+  }
+  updateStatus();
+}
+function openChest(key){
+  S.flag.chest[key]=true;
+  const loot=CHEST_FIXED[key]||{t:"gold",v:800};
+  se("chest");save();
+  let t="たからばこを あけた！\n";
+  if(loot.t==="gold"){S.gold+=loot.v;t+=loot.v+"G てにいれた！";}
+  else if(loot.t==="herb"){S.herb+=loot.v;t+="やくそう×"+loot.v+" てにいれた！";}
+  else if(loot.t==="mwater"){S.mwater+=loot.v;t+="まほうすい×"+loot.v+" てにいれた！";}
+  else if(loot.t==="weap"){
+    if(loot.v>S.wi){S.wi=loot.v;t+=WEAPONS[loot.v].n+"を てにいれた！こうげき"+atkV()+"に！";}
+    else{S.gold+=300;t+="(すでにもっているので 300Gに かえた)";}
+  }
+  else if(loot.t==="armor"){
+    if(loot.v>S.ai){S.ai=loot.v;t+=ARMORS[loot.v].n+"を てにいれた！しゅび"+defV()+"に！";}
+    else{S.gold+=300;t+="(すでにもっているので 300Gに かえた)";}
+  }
+  say(t);updateStatus();
+}
+
+/* ================= 会話・施設 ================= */
+function talk(){
+  if(!S||S.mode!=="walk"||moving())return;
+  const dx={left:-1,right:1,up:0,down:0}[S.dir],dy={up:-1,down:1,left:0,right:0}[S.dir];
+  const n=npcs.find(n=>n.x===S.x+dx&&n.y===S.y+dy)||npcs.find(n=>n.x===S.x&&n.y===S.y);
+  if(!n){say("だれも いない。荒野の 風が ふいている…");return;}
+  se("talk");
+  if(n.boss){say(npcText(n),()=>princessTalk());return;}
+  if(n.t==="shop"){say(npcText(n),openShop);return;}
+  if(n.t==="inn"){say(npcText(n),openInn);return;}
+  if(n.t==="church"){say(npcText(n),openChurch);return;}
+  if(n.t==="king"&&!S.metKing){
+    S.metKing=true;S.herb+=2;S.hp=S.maxhp;S.mp=S.maxmp;save();
+    say(npcText(n)+"\n(やくそう+2・HP/MP全回復・きろくした！)",null);updateStatus();return;
+  }
+  if(n.t==="king"){S.hp=S.maxhp;S.mp=S.maxmp;save();say(npcText(n)+"\n(HP/MP全回復・きろくした！)",null);updateStatus();return;}
+  say(npcText(n));
+}
+function openShop(){
+  say("🧙「"+S.gold+"G おもちだね」\nぶき:"+WEAPONS[S.wi].n+" ぼうぐ:"+ARMORS[S.ai].n,()=>{
+    const opts=[];
+    const w=WEAPONS[S.wi+1],a=ARMORS[S.ai+1];
+    if(w)opts.push({label:w.n+" "+w.price+"G\n攻+"+w.atk,fn:()=>{
+      if(S.gold>=w.price){S.gold-=w.price;S.wi++;se("gold");say(w.n+"を そうび！こうげき"+atkV());}else say("お金が たりない！",openShop);updateStatus();}});
+    if(a)opts.push({label:a.n+" "+a.price+"G\n守+"+a.def,fn:()=>{
+      if(S.gold>=a.price){S.gold-=a.price;S.ai++;se("gold");say(a.n+"を そうび！しゅび"+defV());}else say("お金が たりない！",openShop);updateStatus();}});
+    opts.push({label:"💊やくそう 20G\nHP30回復",fn:()=>{
+      if(S.gold>=20){S.gold-=20;S.herb++;se("gold");say("やくそうを かった！("+S.herb+"個)",openShop);}else say("お金が たりない！",openShop);updateStatus();}});
+    opts.push({label:"🧪まほうすい 30G\nMP10回復",fn:()=>{
+      if(S.gold>=30){S.gold-=30;S.mwater++;se("gold");say("まほうすいを かった！("+S.mwater+"個)",openShop);}else say("お金が たりない！",openShop);updateStatus();}});
+    opts.push({label:"みせを でる",fn:()=>say("🧙「またきてくれ！」")});
+    showCmd(opts);
+  });
+  updateStatus();
+}
+function openInn(){
+  showCmd([
+    {label:"とまる 15G\nHP・MP全回復",fn:()=>{
+      if(S.gold>=15){S.gold-=15;S.hp=S.maxhp;S.mp=S.maxmp;se("heal");save();say("ゆっくり やすんだ！\nHP・MPが かいふくした！★きろくした");}else say("お金が たりない！");updateStatus();}},
+    {label:"やめる",fn:()=>say("🧑‍🦰「またどうぞ！」")}]);
+}
+function openChurch(){
+  S.hp=Math.min(S.maxhp,S.hp+10);S.mp=Math.min(S.maxmp,S.mp+3);save();se("heal");updateStatus();
+  say("⛪「おいのり しましょう」\n★ きろく しました ★\nHP・MPが すこし かいふく！");
+}
+function showDex(pg){
+  pg=pg||0;
+  const per=6,total=ENEMIES.length,pages=Math.ceil(total/per);
+  pg=Math.max(0,Math.min(pages-1,pg));
+  let t="📖モンスター図鑑 "+(pg+1)+"/"+pages+"\n";
+  for(let k=0;k<per;k++){
+    const idx=pg*per+k;if(idx>=total)break;
+    const d=S.dex&&S.dex[idx];
+    if(d&&d.s>0){const e=ENEMIES[idx];t+=(idx+1)+"."+e.e+e.n+" 遭遇"+d.s+" 撃破"+d.k+"\n";}
+    else t+=(idx+1)+".？？？ 未遭遇\n";
+  }
+  say(t,()=>{
+    const o=[];
+    if(pg<pages-1)o.push({label:"つぎへ",fn:()=>showDex(pg+1)});
+    if(pg>0)o.push({label:"まえへ",fn:()=>showDex(pg-1)});
+    o.push({label:"とじる",fn:()=>{}});
+    showCmd(o);
+  });
+}
+function showStatus(){
+  if(!S||S.mode!=="walk"||moving())return;
+  say("ゆうしゃ Lv"+S.lv+" HP"+S.hp+"/"+S.maxhp+" MP"+S.mp+"/"+S.maxmp+"\n攻"+atkV()+"("+WEAPONS[S.wi].n+") 守"+defV()+"("+ARMORS[S.ai].n+")\n"+S.gold+"G・💊"+S.herb+" 🧪"+S.mwater+"・"+S.kills+"匹撃破\nさくせん:"+(S.tactic?tacticName():"じぶんで")+"\n"+nextGoal(),()=>{
+    const o=[{label:"とじる",fn:()=>{}}];
+    if(S.herb>0&&S.hp<S.maxhp)o.unshift({label:"💊やくそうを使う",fn:()=>{S.herb--;S.hp=Math.min(S.maxhp,S.hp+30);se("heal");updateStatus();say("HPが 30かいふく！("+S.hp+"/"+S.maxhp+")");}});
+    if(S.mwater>0&&S.mp<S.maxmp)o.unshift({label:"🧪まほうすいを使う",fn:()=>{S.mwater--;S.mp=Math.min(S.maxmp,S.mp+10);se("heal");updateStatus();say("MPが 10かいふく！("+S.mp+"/"+S.maxmp+")");}});
+    const fs=knownSpells().filter(s=>s.id==="hoimi"||s.id==="behoimi"||s.id==="ril");
+    if(fs.length)o.unshift({label:"✨じゅもんをつかう",fn:()=>{
+      say("どの じゅもん？(MP:"+S.mp+")",()=>{
+        showCmd(fs.map(s=>({label:s.n+" "+s.mp+"MP\n"+s.d,fn:()=>castFieldSpell(s)})).concat([{label:"もどる",fn:()=>showStatus()}]));
+      });
+    }});
+    o.unshift({label:"📖ずかんをみる",fn:()=>showDex(0)});
+    showCmd(o);
+  });
+}
+function castFieldSpell(s){
+  if(S.mp<s.mp){say("MPが たりない！",()=>showStatus());return;}
+  if(s.id==="ril"){
+    if(S.map!=="dungeon"){say("ここでは つかえない！(ダンジョン専用)",()=>showStatus());return;}
+    S.mp-=s.mp;se("heal");save();
+    S.map="field";S.x=22;S.y=19;S.rx=22;S.ry=19;setupNPCs();playBgm("field");updateStatus();
+    say("✨リレミト！ 魔王城から 脱出した！",null);return;
+  }
+  const v=s.id==="hoimi"?25+S.lv*2:70;
+  if(S.hp>=S.maxhp){say("HPは まんたんだ！",()=>showStatus());return;}
+  S.mp-=s.mp;S.hp=Math.min(S.maxhp,S.hp+v);healT=1;se("heal");updateStatus();
+  say("✨"+s.n+"！ HPが "+v+"かいふく！("+S.hp+"/"+S.maxhp+")",null);
+}
+
+/* ================= バトル ================= */
+let transT=0,flashT=0,shakeT=0,slashT=0,fireT=0,healT=0,parts=[],dmgPops=[];
+function pickEnemy(){
+  let pool;
+  if(S.map==="dungeon"){
+    if(S.lv>=9)pool=[5,6,7,8,9];else if(S.lv>=6)pool=[4,5,6,7];else pool=[2,3,4,5];
+  }else{
+    const north=S.y<10;
+    if(S.lv<3)pool=north?[0,1]:[0,1,2];
+    else if(S.lv<6)pool=north?[1,2,3]:[1,2,3,4];
+    else pool=[2,3,4,5,6];
+  }
+  const i=pool[Math.floor(Math.random()*pool.length)];
+  const e=ENEMIES[i];
+  const c=Object.assign({i:i},e,{maxhp:e.hp});
+  if(S.ng){c.hp=c.maxhp=Math.round(e.hp*1.6);c.atk=e.atk+5;c.exp=e.exp*2;c.gold=e.gold*2;}
+  return c;
+}
+function dexSeen(i){if(!S.dex)S.dex={};const d=S.dex[i]||(S.dex[i]={s:0,k:0});d.s++;}
+function dexKill(i){if(!S.dex)S.dex={};const d=S.dex[i]||(S.dex[i]={s:0,k:0});d.k++;}
+function startBattle(spec){
+  spec=spec||{};
+  S.mode="trans";transT=0;sayCb=null;hideCmd();clearAuto();
+  playBgm(null);se("curse");
+  setTimeout(()=>{
+    let b;
+    if(spec.boss){
+      const e=ENEMIES[10];
+      b=Object.assign({i:10,terrain:"5",after:null},e,{maxhp:e.hp});
+      if(S.ng){b.hp=b.maxhp=Math.round(e.hp*1.4);b.atk=e.atk+4;}
+    }else if(spec.fixed!=null){
+      const e=ENEMIES[spec.fixed];
+      b=Object.assign({i:spec.fixed,terrain:"5",after:spec.after||null},e,{maxhp:e.hp});
+      if(S.ng){b.hp=b.maxhp=Math.round(e.hp*1.4);b.atk=e.atk+4;}
+    }else{
+      b=pickEnemy();
+      b.terrain=spec.terrain||"0";
+      b.after=null;
+    }
+    B=b;
+    dexSeen(B.i);
+    dmgPops=[];
+    S.bossTurn=0;S.mode="battle";
+    playBgm(B.boss?"boss":"battle");
+    say((spec.fixed!=null?"魔王の罠だ！":"")+B.n+" が あらわれた！",battleMenu);
+  },650);
+}
+function princessTalk(){
+  if(S.flag.dragon){confirmBoss();return;}
+  say("👸「きてくれたのね…きゃっ！？ 様子が おかしい…罠だわ！」",()=>startBattle({fixed:9,after:"dragon"}));
+}
+function confirmBoss(){
+  showCmd([
+    {label:"⚔ 魔王と たたかう！",fn:()=>startBattle({boss:true})},
+    {label:"まだ じゅんびする",fn:()=>say("👸「きっと かってね…！」")}]);
+}
+function tacticName(){return {gangan:"がんがんいけ",inochi:"いのちだいじに"}[S.tactic]||"じぶんで";}
+let autoTimer=null;
+function clearAuto(){if(autoTimer){clearTimeout(autoTimer);autoTimer=null;}}
+function tacticMenu(){
+  say("さくせんを えらんでね(記憶される)",()=>{
+    showCmd([
+      {label:"⚔がんがんいけ\n自動で攻撃重視",fn:()=>{S.tactic="gangan";save();say("さくせん「がんがんいけ！」",()=>battleMenu());}},
+      {label:"💚いのちだいじに\n自動で回復優先",fn:()=>{S.tactic="inochi";save();say("さくせん「いのちだいじに！」",()=>battleMenu());}},
+      {label:"🙋じぶんでたたかう",fn:()=>{S.tactic=null;clearAuto();save();battleMenu();}}
+    ]);
+  });
+}
+function autoAct(){
+  autoTimer=null;
+  if(!B||S.mode!=="battle"||!S.tactic)return;
+  const sp=id=>SPELLS.find(s=>s.id===id);
+  const lowHp=S.hp<S.maxhp*0.45,pinch=S.hp<S.maxhp*0.25;
+  const canBe=S.mp>=8&&S.lv>=8,canHo=S.mp>=3&&S.lv>=2;
+  if(S.tactic==="inochi"&&lowHp){
+    if(canBe){castSpell(sp("behoimi"));return;}
+    if(canHo){castSpell(sp("hoimi"));return;}
+    if(S.herb>0){S.herb--;S.hp=Math.min(S.maxhp,S.hp+30);healT=1;se("heal");updateStatus();
+      say("やくそうで HP30かいふく！("+S.hp+"/"+S.maxhp+")",()=>{if(!endBattleCheck()&&!bossPhase())setTimeout(enemyTurn,350);});return;}
+  }
+  if(pinch&&canHo){castSpell(sp("hoimi"));return;}
+  const atkSp=S.lv>=6&&S.mp>=8?sp("gira"):(S.lv>=3&&S.mp>=4?sp("mera"):null);
+  if(atkSp&&(S.tactic==="gangan"||S.mp>S.maxmp*0.3)){castSpell(atkSp);return;}
+  playerAttack();
+}
+function battleMenu(){
+  if(!B)return;
+  say(B.n+" HP:"+Math.max(0,B.hp)+"/"+B.maxhp+"\nゆうしゃ HP:"+S.hp+" MP:"+S.mp+(S.tactic?"\n(さくせん:"+tacticName()+" 実行中)":"\nどうする？"),()=>{
+    if(S.tactic){
+      showCmd([{label:"⏸ さくせん停止",fn:()=>{S.tactic=null;clearAuto();se("talk");battleMenu();}}]);
+      clearAuto();autoTimer=setTimeout(autoAct,700);
+      return;
+    }
+    const o=[
+      {label:"⚔ たたかう",fn:playerAttack},
+      {label:"✨ じゅもん",fn:spellMenu},
+      {label:"🎒 どうぐ",fn:itemMenu},
+      {label:"📋 さくせん",fn:tacticMenu},
+      {label:"🏃 にげる",fn:playerRun}];
+    showCmd(o);
+  });
+}
+function spellMenu(){
+  const ks=knownSpells().filter(s=>s.id!=="ril");
+  if(!ks.length){say("たたかいで つかえる じゅもんが ない！",()=>battleMenu());return;}
+  say("どの じゅもん？(MP:"+S.mp+")",()=>{
+    const o=ks.map(s=>({label:s.n+" "+s.mp+"MP\n"+s.d,fn:()=>castSpell(s)}));
+    o.push({label:"もどる",fn:()=>battleMenu()});
+    showCmd(o);
+  });
+}
+function castSpell(s){
+  if(s.id==="ril"){say("たたかいの最中は つかえない！",()=>battleMenu());return;}
+  if(S.mp<s.mp){say("MPが たりない！",()=>battleMenu());return;}
+  S.mp-=s.mp;
+  if(s.id==="hoimi"||s.id==="behoimi"){
+    const v=s.id==="hoimi"?25+S.lv*2:70;
+    S.hp=Math.min(S.maxhp,S.hp+v);healT=1;se("heal");updateStatus();
+    floatText("+"+v+"かいふく","#6f6");
+    say("✨"+s.n+"！ HPが "+v+"かいふく！",()=>{if(!endBattleCheck())setTimeout(enemyTurn,350);});
+  }else{
+    const v=(s.id==="mera"?12+S.lv*3:20+S.lv*4)+Math.floor(Math.random()*5);
+    B.hp-=v;fireT=1;shakeT=1;flashT=1;se("fire");floatText(v+"ダメージ","#fc3");
+    say("✨"+s.n+"！ "+B.n+"に "+v+"ダメージ！",()=>{if(!endBattleCheck()&&!bossPhase())setTimeout(enemyTurn,350);});
+  }
+  updateStatus();
+}
+function itemMenu(){
+  say("どれを つかう？(💊"+S.herb+" 🧪"+S.mwater+")",()=>{
+    showCmd([
+      {label:"💊やくそう HP30回復",fn:()=>{
+        if(S.herb<=0){say("やくそうが ない！",()=>battleMenu());return;}
+        S.herb--;S.hp=Math.min(S.maxhp,S.hp+30);healT=1;se("heal");updateStatus();
+        say("やくそうで HP30かいふく！("+S.hp+"/"+S.maxhp+")",()=>{if(!endBattleCheck())setTimeout(enemyTurn,350);});}},
+      {label:"🧪まほうすい MP10回復",fn:()=>{
+        if(S.mwater<=0){say("まほうすいが ない！",()=>battleMenu());return;}
+        S.mwater--;S.mp=Math.min(S.maxmp,S.mp+10);healT=1;se("heal");updateStatus();
+        say("まほうすいで MP10かいふく！",()=>{if(!endBattleCheck())setTimeout(enemyTurn,350);});}},
+      {label:"もどる",fn:()=>battleMenu()}]);
+  });
+}
+function floatText(txt,color){dmgPops.push({txt:txt,color:color||"#fff",t:0});}
+function bossPhase(){
+  if(B&&B.boss&&!B.phase2&&B.hp>0&&B.hp<=B.maxhp/2){
+    B.phase2=true;B.atk+=6;fireT=1;shakeT=1;se("curse");
+    say("魔王バーンは 真の姿を あらわした！\nこうげき力が あがった！",()=>setTimeout(enemyTurn,350));
+    return true;
+  }
+  return false;
+}
+function playerAttack(){
+  const crit=Math.random()<0.12;
+  const dmg=Math.max(1,atkV()+Math.floor(Math.random()*5)-B.def)*(crit?2:1);
+  B.hp-=dmg;slashT=1;shakeT=1;flashT=1;se("slash");
+  floatText((crit?"かいしん！":"")+dmg+"ダメージ",crit?"#fd0":"#fff");
+  say("ゆうしゃ の こうげき！\n"+B.n+"に "+dmg+"ダメージ！",()=>{if(!endBattleCheck()&&!bossPhase())setTimeout(enemyTurn,350);});
+}
+function playerRun(){
+  if(B.boss){say("魔王からは にげられない！",()=>setTimeout(enemyTurn,350));return;}
+  if(Math.random()<0.62){se("run");clearAuto();B=null;S.mode="walk";safeSteps=4;playBgm(S.map==="town"?"town":S.map==="dungeon"?"dungeon":"field");say("うまく にげきれた！");updateStatus();}
+  else say("にげきれなかった！",()=>setTimeout(enemyTurn,350));
+}
+function enemyTurn(){
+  if(!B||S.mode!=="battle")return;
+  S.bossTurn++;
+  // ボスAI: 3ターン毎に火炎 + HP半分以下で回復
+  if(B.boss&&B.hp<B.maxhp*0.45&&Math.random()<0.35){
+    B.hp=Math.min(B.maxhp,B.hp+60);healT=1;se("heal");
+    say("魔王バーンは あんこくのちからで HPを 60かいふくした！",()=>{if(!endBattleCheck())battleMenu();});return;
+  }
+  if(B.boss&&S.bossTurn%3===0){
+    const dmg=24+Math.floor(Math.random()*14);
+    S.hp-=dmg;fireT=1;se("fire");updateStatus();
+    say("魔王バーンの しゃくねつのほのお！ "+dmg+"ダメージ！",()=>{if(!endBattleCheck())battleMenu();});return;
+  }
+  const crit=Math.random()<(B.boss?0.15:0.08);
+  const dmg=Math.max(1,B.atk+Math.floor(Math.random()*5)-Math.floor(defV()/2))*(crit?2:1);
+  S.hp-=dmg;se("hit");updateStatus();
+  say(B.n+" の こうげき！ "+dmg+"ダメージ！"+(crit?"(つうこん！)":"")+"\nゆうしゃ HP:"+Math.max(0,S.hp),()=>{if(!endBattleCheck())battleMenu();});
+}
+function endBattleCheck(){
+  updateStatus();
+  if(B&&B.hp<=0){
+    const boss=B.boss,bi=B.i,after=B.after;
+    S.exp+=B.exp;S.gold+=B.gold;S.kills++;dexKill(bi);safeSteps=6;se("win");clearAuto();
+    let t=B.n+" を たおした！\n"+B.exp+"EXP・"+B.gold+"G てにいれた！";
+    B=null;S.mode="walk";playBgm(S.map==="town"?"town":S.map==="dungeon"?"dungeon":"field");
+    let lvMsg="";
+    while(S.exp>=expNeed()){
+      S.exp-=expNeed();S.lv++;
+      S.maxhp+=5+Math.floor(Math.random()*4);S.maxmp+=2+Math.floor(Math.random()*2);
+      S.atk+=2;S.def+=1+Math.floor(Math.random()*2);S.hp=S.maxhp;S.mp=S.maxmp;se("lvl");
+      const ns=SPELLS.find(s=>s.minLv===S.lv);
+      lvMsg+="\n🎉 レベル"+S.lv+"に あがった！(HP・MP全回復)"+(ns?"\n✨"+ns.n+"を おぼえた！":"");
+    }
+    save();updateStatus();
+    if(boss){say(t+lvMsg+"\n\n👑 魔王を たおし ひめを すくった！",showClear);return true;}
+    if(after==="dragon"){
+      S.flag.dragon=true;save();updateStatus();
+      say(t+"\n\n👸「番竜を たおしてくれたのね！でも…魔王の気配が 近づいてくる！」",()=>confirmBoss());
+      return true;
+    }
+    save();updateStatus();
+    say(t+lvMsg+"\n(つぎまで "+(expNeed()-S.exp)+"EXP)",null);
+    return true;
+  }
+  if(S.hp<=0){
+    se("lose");clearAuto();B=null;hideCmd();S.mode="walk";
+    S.hp=Math.ceil(S.maxhp/2);S.gold=Math.floor(S.gold/2);
+    S.map="town";S.x=9;S.y=10;S.rx=9;S.ry=10;setupNPCs();save();playBgm("town");updateStatus();
+    say("ゆうしゃは しんでしまった…\n王様に たすけられた。(G半分・HP半分で まち復活)\n教会で きろくしよう！");
+    return true;
+  }
+  return false;
+}
+function clearRank(){
+  const mins=playMs()/60000;
+  if(S.lv<=8)return "S";
+  if(S.lv<=10&&mins<=90)return "A";
+  if(S.lv<=12)return "B";
+  return "C";
+}
+function showClear(){
+  S.mode="clear";save();stopBgm();se("win");
+  const mins=Math.floor(playMs()/60000),secs=Math.floor(playMs()/1000)%60;
+  overlay.innerHTML="<div class='sub'>— CLEAR! —</div><h1>🏆 冒険クリア！</h1>"+
+    "<p>ひめを すくい 世界に 平和が もどった！<br>Lv"+S.lv+"・"+S.kills+"匹撃破・"+S.steps+"歩・"+mins+"分"+secs+"秒<br>つよさ 攻"+atkV()+" 守"+defV()+"<br>ぼうけんランク:<b style='color:#ffd700;font-size:22px'>"+clearRank()+"</b></p>"+
+    "<button id='btn-again'>▶ もういちど遊ぶ</button><button id='btn-ng'>▶つよくてニューゲーム</button><button id='btn-title2'>タイトルへ</button>";
+  overlay.classList.remove("hidden");
+  document.getElementById("btn-again").onclick=()=>{newGame();S.mode="walk";startPlay();};
+  document.getElementById("btn-ng").onclick=()=>{ngPlus();};
+  document.getElementById("btn-title2").onclick=()=>{location.reload();};
+}
+function ngPlus(){
+  const keep={lv:S.lv,maxhp:S.maxhp,maxmp:S.maxmp,atk:S.atk,def:S.def,wi:S.wi,ai:S.ai,
+    gold:S.gold,dex:S.dex,kills:S.kills,tactic:S.tactic};
+  newGame();
+  S.lv=keep.lv;S.maxhp=keep.maxhp;S.maxmp=keep.maxmp;S.mp=keep.maxmp;S.atk=keep.atk;S.def=keep.def;
+  S.wi=keep.wi;S.ai=keep.ai;S.gold=keep.gold;S.dex=keep.dex;S.kills=keep.kills;S.tactic=keep.tactic;
+  S.herb=5;S.mwater=3;S.metKing=true;S.ng=true;S.hp=S.maxhp;S.mode="walk";
+  startPlay();save();
+  say("つよくてニューゲーム！\n敵が パワーアップしている…魔王城へ いそげ！");
+}
+
+/* ================= 描画 ================= */
+function hash(x,y){let h=(x*374761393+y*668265263)|0;h=(h^(h>>13))*1274126177;return ((h^(h>>16))>>>0)%100;}
+function drawTile(ch,px,py,mx,my,t){
+  if(ch==="0"){
+    ctx.fillStyle=((mx+my)%2===0)?"#3aa845":"#34a03e";ctx.fillRect(px,py,T,T);
+    const h=hash(mx,my);
+    if(h<12){ctx.fillStyle="#2c8a35";ctx.fillRect(px+5,py+6,3,5);}
+    else if(h<16){ctx.fillStyle="#ff8ac2";ctx.fillRect(px+10,py+8,4,4);}
+    else if(h<20){ctx.fillStyle="#fff";ctx.fillRect(px+14,py+14,2,2);}
+  }else if(ch==="1"){
+    ctx.fillStyle="#3aa845";ctx.fillRect(px,py,T,T);
+    ctx.fillStyle="#5c3a1e";ctx.fillRect(px+10,py+15,4,7);
+    ctx.fillStyle="#1d6b2a";ctx.beginPath();ctx.arc(px+12,py+10,9,0,7);ctx.fill();
+    ctx.fillStyle="#2fa04a";ctx.beginPath();ctx.arc(px+9,py+7,4,0,7);ctx.fill();
+  }else if(ch==="2"){
+    ctx.fillStyle="#2a7de1";ctx.fillRect(px,py,T,T);
+    ctx.fillStyle="rgba(255,255,255,.55)";
+    const o=Math.floor(t/400+mx+my)%2;
+    ctx.fillRect(px+3+o*4,py+5,7,2);ctx.fillRect(px+12-o*4,py+15,7,2);
+  }else if(ch==="3"){
+    ctx.fillStyle="#c9a86a";ctx.fillRect(px,py,T,T);
+    ctx.strokeStyle="rgba(120,80,30,.5)";ctx.lineWidth=1;
+    ctx.strokeRect(px+.5,py+.5,T-1,T-1);
+    ctx.beginPath();ctx.moveTo(px,py+12);ctx.lineTo(px+T,py+12);ctx.stroke();
+  }else if(ch==="4"){
+    ctx.fillStyle="#6b6b7d";ctx.fillRect(px,py,T,T);
+    ctx.fillStyle="#9a9ab0";ctx.fillRect(px,py,T,5);
+    ctx.fillStyle="#3a3a48";ctx.fillRect(px,py+T-5,T,5);
+    ctx.strokeStyle="rgba(0,0,0,.35)";ctx.strokeRect(px+4.5,py+7.5,T-9,9);
+  }else if(ch==="5"){
+    ctx.fillStyle="#4a3a5e";ctx.fillRect(px,py,T,T);
+    ctx.strokeStyle="#2c2138";ctx.lineWidth=1;
+    ctx.strokeRect(px+.5,py+.5,T-1,T-1);
+    ctx.beginPath();ctx.moveTo(px,py+12);ctx.lineTo(px+T,py+12);ctx.stroke();
+    if(hash(mx,my)<10){ // たいまつ
+      const f=Math.sin(t/150+mx)*2;
+      ctx.fillStyle="#3a2a10";ctx.fillRect(px+10,py+12,4,8);
+      ctx.fillStyle="#ff9d00";ctx.beginPath();ctx.arc(px+12,py+9+f,4,0,7);ctx.fill();
+      ctx.fillStyle="#ffe27a";ctx.beginPath();ctx.arc(px+12,py+9+f,2,0,7);ctx.fill();
+    }
+  }else if(ch==="6"){
+    ctx.fillStyle="#222";ctx.fillRect(px,py,T,T);
+    ctx.fillStyle="#ffd700";ctx.fillRect(px+3,py+3,T-6,T-6);
+    ctx.fillStyle="#222";ctx.beginPath();
+    ctx.moveTo(px+7,py+9);ctx.lineTo(px+17,py+9);ctx.lineTo(px+12,py+16);ctx.closePath();ctx.fill();
+  }else if(ch==="7"){
+    const opened=S&&S.flag.chest[S.map+":"+mx+","+my];
+    ctx.fillStyle=ch==="7"?"#3a2a5e":"#000";ctx.fillRect(px,py,T,T);
+    ctx.fillStyle=opened?"#555":"#8b5a2b";ctx.fillRect(px+3,py+9,18,12);
+    ctx.fillStyle=opened?"#333":"#a06a35";ctx.fillRect(px+3,py+9,18,4);
+    ctx.fillStyle=opened?"#222":"#ffd700";ctx.fillRect(px+10,py+9,4,12);
+  }else if(ch==="8"){
+    ctx.fillStyle="#3aa845";ctx.fillRect(px,py,T,T);
+    ctx.fillStyle="#2c8a35";ctx.fillRect(px+11,py+12,2,8);
+    ctx.fillStyle="#ff8ac2";
+    ctx.fillRect(px+7,py+6,4,4);ctx.fillRect(px+13,py+6,4,4);ctx.fillRect(px+10,py+9,4,4);
+    ctx.fillStyle="#ffe27a";ctx.fillRect(px+11,py+7,2,2);
+  }else if(ch==="9"){
+    ctx.fillStyle="#b8935a";ctx.fillRect(px,py,T,T);
+    ctx.fillStyle="rgba(0,0,0,.12)";
+    if((mx+my)%2===0)ctx.fillRect(px+4,py+4,5,3);else ctx.fillRect(px+14,py+15,5,3);
+  }else{ctx.fillStyle="#000";ctx.fillRect(px,py,T,T);}
+}
+function drawHero(px,py,frame,dir){
+  const bob=frame?1:0;
+  ctx.fillStyle="rgba(0,0,0,.35)";ctx.beginPath();ctx.ellipse(px,py+10,8,3,0,0,7);ctx.fill();
+  ctx.fillStyle="#3a2a1a";ctx.fillRect(px-5,py-8+bob,10,3); // くつ
+  ctx.fillStyle="#2456c8";ctx.fillRect(px-6,py-6+bob,12,9); // からだ
+  ctx.fillStyle="#ffd9a0";ctx.fillRect(px-5,py-14+bob,10,8); // かお
+  ctx.fillStyle="#5a3a1a";ctx.fillRect(px-5,py-15+bob,10,3); // かみ
+  ctx.fillStyle="#222";ctx.fillRect(px-3,py-11+bob,2,2);ctx.fillRect(px+1,py-11+bob,2,2);
+  ctx.fillStyle="#c0c0c0";
+  if(dir==="left")ctx.fillRect(px-10,py-6+bob,4,3);
+  if(dir==="right")ctx.fillRect(px+6,py-6+bob,4,3);
+  if(dir==="up")ctx.fillRect(px-6,py-14+bob,12,2);
+}
+function drawNPCIcon(type,px,py,t){
+  const bob=Math.sin(t/400+px)*1.5;
+  if(type==="sign"){
+    ctx.fillStyle="rgba(0,0,0,.3)";ctx.beginPath();ctx.ellipse(px,py+10,7,2.5,0,0,7);ctx.fill();
+    ctx.fillStyle="#5c3a1e";ctx.fillRect(px-2,py-2,4,12);
+    ctx.fillStyle="#8b5a2b";ctx.fillRect(px-11,py-12,22,11);
+    ctx.strokeStyle="#3a2410";ctx.lineWidth=1;ctx.strokeRect(px-11.5,py-12.5,23,12);
+    ctx.fillStyle="#3a2410";ctx.fillRect(px-7,py-9,14,2);ctx.fillRect(px-7,py-5,10,2);
+    return;
+  }
+  ctx.fillStyle="rgba(0,0,0,.3)";ctx.beginPath();ctx.ellipse(px,py+10,8,3,0,0,7);ctx.fill();
+  const robe={king:"#c02020",shop:"#5a3aa0",inn:"#c07030",church:"#e8e8e8",girl:"#ff8ac2",gate:"#3a6ac0",sage:"#4a8a4a"}[type]||"#888";
+  ctx.fillStyle=robe;ctx.fillRect(px-6,py-5+bob,12,14);
+  ctx.fillStyle="#ffd9a0";ctx.beginPath();ctx.arc(px,py-8+bob,6,0,7);ctx.fill();
+  if(type==="king"){ctx.fillStyle="#ffd700";ctx.fillRect(px-5,py-16+bob,10,4);}
+  if(type==="girl"){ctx.fillStyle="#8a4a1a";ctx.fillRect(px-6,py-13+bob,12,5);}
+  if(type==="gate"){ctx.fillStyle="#c0c0c0";ctx.fillRect(px-6,py-12+bob,12,3);}
+  if(type==="church"){ctx.fillStyle="#ffd700";ctx.fillRect(px-1,py-3+bob,2,6);ctx.fillRect(px-3,py-1+bob,6,2);}
+}
+function drawMap(t){
+  const m=MAPS[S.map];
+  const ox=S.rx-9.5,oy=S.ry-7;
+  for(let sy=0;sy<16;sy++)for(let sx=0;sx<22;sx++){
+    const mx=Math.floor(ox+sx),my=Math.floor(oy+sy);
+    const px=(sx-(ox-Math.floor(ox)))*T,py=(sy-(oy-Math.floor(oy)))*T;
+    let ch="4";
+    if(my>=0&&my<m.length&&mx>=0&&mx<m[0].length)ch=m[my][mx];
+    drawTile(ch,px,py,mx,my,t);
+  }
+  npcs.forEach(n=>{
+    const sx=(n.x-ox)*T,sy=(n.y-oy)*T;
+    if(sx<-T||sy<-T||sx>480+T||sy>360+T)return;
+    drawNPCIcon(n.t,sx,sy,t);
+  });
+  const frame=Math.floor(t/220)%2;
+  drawHero(9.5*T,7*T+T/2,frame,S.dir);
+  // 魔王城マーカー
+  if(S.map==="field"){
+    const cx=(22.5-ox)*T,cy=(23-oy)*T;
+    if(cx>0&&cx<480&&cy>0&&cy<360){
+      ctx.font="bold 11px sans-serif";ctx.textAlign="center";
+      ctx.fillStyle="#ff4040";ctx.fillText("▼魔王城",cx,cy-24+Math.sin(t/300)*3);
+    }
+  }
+}
+function drawBattle(t,dt){
+  const dun=S.map==="dungeon";
+  const road=!dun&&B&&B.terrain==="9";
+  const g=ctx.createLinearGradient(0,0,0,360);
+  if(dun){g.addColorStop(0,"#1a0a20");g.addColorStop(.6,"#3a1525");g.addColorStop(1,"#201018");}
+  else if(road){g.addColorStop(0,"#3a9de0");g.addColorStop(.55,"#7ec8f0");g.addColorStop(.56,"#b8935a");g.addColorStop(1,"#8a6a3a");}
+  else{g.addColorStop(0,"#3a9de0");g.addColorStop(.55,"#7ec8f0");g.addColorStop(.56,"#3aa845");g.addColorStop(1,"#2c7a32");}
+  ctx.fillStyle=g;ctx.fillRect(0,0,480,360);
+  if(!dun){ctx.fillStyle="#fff";for(let i=0;i<5;i++){const cx=((i*137+t/60)%520)-20;ctx.fillRect(cx,30+i*14,34,8);}}
+  if(road){ctx.fillStyle="rgba(120,80,30,.5)";for(let i=0;i<8;i++){ctx.fillRect((i*61+t/90)%480,215+((i*37)%120),10,4);}}
+  else{for(let i=0;i<6;i++){const fx=(i*80+40);const fl=Math.sin(t/150+i)*2;ctx.fillStyle="#ff9d00";ctx.beginPath();ctx.arc(fx,60+fl,6,0,7);ctx.fill();ctx.fillStyle="#ffe27a";ctx.beginPath();ctx.arc(fx,60+fl,3,0,7);ctx.fill();}}
+  ctx.fillStyle="rgba(0,0,0,.3)";ctx.beginPath();ctx.ellipse(240,290,130,22,0,0,7);ctx.fill();
+  // 敵
+  if(B){
+    const bob=Math.sin(t/500)*8;
+    let ex=240,ey=190+bob;
+    if(shakeT>0)ex+=(Math.random()-.5)*16;
+    if(slashT>0){ctx.strokeStyle="#fff";ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(ex-70,ey-70+ (1-slashT)*140);ctx.lineTo(ex+70,ey+70-(1-slashT)*140);ctx.stroke();}
+    if(fireT>0){for(let i=0;i<10;i++){ctx.fillStyle=["#f00","#ff9d00","#ffe27a"][i%3];ctx.beginPath();ctx.arc(ex+(Math.random()-.5)*140,ey+(Math.random()-.5)*90,8+Math.random()*10,0,7);ctx.fill();}}
+    ctx.font=(B.boss?"150px":"120px")+" serif";ctx.textAlign="center";ctx.textBaseline="middle";
+    if(flashT>0){ctx.save();ctx.globalAlpha=.4+Math.random()*.5;}
+    ctx.fillText(B.e,ex,ey);
+    if(flashT>0)ctx.restore();
+  }
+  if(healT>0){for(let i=0;i<8;i++){ctx.fillStyle="#6f6";ctx.beginPath();ctx.arc(200+i*12+Math.random()*6,300-((1-healT)*160)-Math.random()*20,5,0,7);ctx.fill();}}
+  // 敵ステータス枠
+  if(B){
+    ctx.fillStyle="rgba(0,0,0,.85)";ctx.fillRect(60,14,360,52);
+    ctx.strokeStyle="#fff";ctx.lineWidth=3;ctx.strokeRect(60,14,360,52);
+    ctx.fillStyle="#fff";ctx.font="bold 17px sans-serif";ctx.textAlign="left";ctx.textBaseline="middle";
+    ctx.fillText(B.n,74,34);
+    ctx.fillStyle="#400";ctx.fillRect(74,46,332,10);
+    ctx.fillStyle=B.hp/B.maxhp>0.3?"#3f6":"#f44";ctx.fillRect(74,46,332*Math.max(0,B.hp/B.maxhp),10);
+  }
+  // ダメージ数字
+  ctx.textAlign="center";
+  dmgPops=dmgPops.filter(p=>p.t<1);
+  dmgPops.forEach(p=>{p.t+=dt*0.0012;ctx.font="bold 22px sans-serif";ctx.fillStyle=p.color;ctx.fillText(p.txt,240,150-p.t*70);});
+  if(transT>0&&S.mode==="trans"){
+    ctx.fillStyle="rgba(255,255,255,"+Math.min(.9,transT*2)+")";ctx.fillRect(0,0,480,360);
+  }
+}
+function draw(t,dt){
+  if(!S)return;
+  dt=(dt>0&&dt<=100)?dt:16.7;
+  ctx.clearRect(0,0,480,360);
+  if(S.mode==="battle"||S.mode==="trans"||(S.mode==="clear"&&B))drawBattle(t,dt);
+  else drawMap(t);
+  if(flashT>0)flashT-=dt*0.0036;if(shakeT>0)shakeT-=dt*0.0048;if(slashT>0)slashT-=dt*0.0042;
+  if(fireT>0)fireT-=dt*0.003;if(healT>0)healT-=dt*0.0024;
+  if(S.mode==="trans")transT+=dt*0.0018;
+}
+/* ミニマップ */
+let miniOn=false,miniEl=null,miniCtx=null;
+function toggleMini(){
+  if(!S)return;
+  miniOn=!miniOn;document.getElementById("mini").classList.toggle("hidden",!miniOn);se("talk");
+}
+const MINI_C={0:"#3aa845",1:"#1d6b2a",2:"#2a7de1",3:"#c9a86a",4:"#555",5:"#7a5a9e",6:"#ffd700",7:"#ff8c00",8:"#e255a0",9:"#b8935a"};
+function drawMini(){
+  if(!miniOn||!S)return;
+  if(!miniEl)miniEl=document.getElementById("mini");
+  if(!miniEl||miniEl.classList.contains("hidden"))return;
+  if(!miniCtx)miniCtx=miniEl.getContext("2d");
+  const g=miniCtx;if(!g)return;
+  const m=MAPS[S.map],W=miniEl.width,H=miniEl.height;
+  g.fillStyle="#000";g.fillRect(0,0,W,H);
+  const tw=W/m[0].length,th=H/m.length;
+  for(let y=0;y<m.length;y++)for(let x=0;x<m[y].length;x++){
+    g.fillStyle=MINI_C[m[y][x]]||"#000";
+    g.fillRect(x*tw,y*th,Math.ceil(tw),Math.ceil(th));
+  }
+  g.fillStyle="#f00";
+  npcs.forEach(n=>{g.fillRect(n.x*tw-1,n.y*th-1,3,3);});
+  g.fillStyle="#ff0";g.fillRect(S.rx*tw-2,S.ry*th-2,4,4);
+  g.strokeStyle="#fff";g.lineWidth=1;g.strokeRect(.5,.5,W-1,H-1);
+}
+/* メインループ: 滑らか移動補間 */
+let lastT=0;
+function loop(t){
+  if(S){
+    let dt=t-lastT;lastT=t;
+    if(!(dt>0)||dt>100)dt=16.7;
+    const k=1-Math.pow(0.7,dt/16.67);
+    S.rx+=(S.x-S.rx)*k;S.ry+=(S.y-S.ry)*k;
+    if(Math.abs(S.x-S.rx)<0.02)S.rx=S.x;
+    if(Math.abs(S.y-S.ry)<0.02)S.ry=S.y;
+    draw(t,dt);drawMini();
+  }
+  requestAnimationFrame(loop);
+}
+
+/* ================= 入力 ================= */
+function pressA(){
+  if(!S)return;
+  if(S.mode==="clear")return;
+  if(typing||sayCb){advance();return;}
+  if(cmdbox.classList.contains("show"))return;
+  if(S.mode==="battle")return;
+  talk();
+}
+function pressB(){
+  if(!S)return;
+  if(typing||sayCb){advance();return;}
+  if(S.mode==="walk")showStatus();
+}
+document.getElementById("a-btn").addEventListener("click",e=>{e.preventDefault();pressA();});
+document.getElementById("b-btn").addEventListener("click",e=>{e.preventDefault();pressB();});
+msgbox.addEventListener("click",()=>{if(typing||sayCb)advance();});
+cv.addEventListener("pointerdown",e=>{e.preventDefault();if(typing||sayCb)advance();});
+const DIRS={up:"up",down:"down",left:"left",right:"right"};
+let holdTimer=null;
+document.querySelectorAll("#dpad button").forEach(b=>{
+  const d=b.dataset.dir;
+  b.addEventListener("pointerdown",e=>{e.preventDefault();ac();tryMove(d);clearInterval(holdTimer);holdTimer=setInterval(()=>tryMove(d),175);});
+  ["pointerup","pointerleave","pointercancel"].forEach(ev=>b.addEventListener(ev,()=>clearInterval(holdTimer)));
+});
+window.addEventListener("keydown",e=>{
+  if(!S)return;
+  const k=e.key;
+  if(k==="ArrowUp"||k==="w"||k==="W"){e.preventDefault();ac();tryMove("up");}
+  else if(k==="ArrowDown"||k==="s"||k==="S"){e.preventDefault();ac();tryMove("down");}
+  else if(k==="ArrowLeft"||k==="a"||k==="A"){e.preventDefault();ac();tryMove("left");}
+  else if(k==="ArrowRight"||k==="d"||k==="D"){e.preventDefault();ac();tryMove("right");}
+  else if(k==="z"||k==="Z"||k===" "||k==="Enter"){e.preventDefault();pressA();}
+  else if(k==="x"||k==="X"||k==="Escape"){e.preventDefault();pressB();}
+  else if(k==="m"||k==="M"){toggleMini();}
+});
+document.getElementById("btn-bgm").onclick=()=>{
+  bgmOn=!bgmOn;try{localStorage.setItem("dq_bgm",bgmOn?"on":"off");}catch(e){}
+  refreshBgmBtn();if(!bgmOn)stopBgm();
+  else{if(S&&S.mode==="walk")playBgm(S.map==="town"?"town":S.map==="dungeon"?"dungeon":"field");else if(S&&S.mode==="battle")playBgm(B&&B.boss?"boss":"battle");}
+};
+document.getElementById("btn-map").onclick=()=>{ac();toggleMini();};
+document.getElementById("btn-help").onclick=()=>document.getElementById("help").classList.remove("hidden");
+document.getElementById("btn-help-close").onclick=()=>document.getElementById("help").classList.add("hidden");
+
+/* ================= 開始 ================= */
+function startPlay(){
+  overlay.classList.add("hidden");
+  setupNPCs();updateStatus();
+  playBgm(S.map==="town"?"town":S.map==="dungeon"?"dungeon":"field");
+  say("ゆうしゃ よみがえる！\nまずは 左上の まちで 王様に 会おう。");
+}
+document.getElementById("btn-new").onclick=()=>{ac();se("lvl");newGame();S.mode="walk";startPlay();save();};
+document.getElementById("btn-load").onclick=()=>{
+  ac();
+  if(load()){S.mode="walk";startPlay();say("おかえり！ぼうけんを つづけよう。(Lv"+S.lv+")");}
+  else{se("lvl");newGame();S.mode="walk";startPlay();say("セーブが ないので はじめから！");}
+};
+refreshBgmBtn();
+newGame();
+requestAnimationFrame(loop);
+updateStatus();
+</script>
+</body>
+</html>
